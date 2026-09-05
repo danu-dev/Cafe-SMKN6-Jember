@@ -1,0 +1,56 @@
+<?php
+
+namespace App\Actions\Fortify;
+
+use App\Models\Team;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Validator;
+use Laravel\Fortify\Contracts\CreatesNewUsers;
+use Laravel\Jetstream\Jetstream;
+
+class CreateNewUser implements CreatesNewUsers
+{
+    use PasswordValidationRules;
+
+    /**
+     * Create a newly registered user.
+     *
+     * @param  array<string, string>  $input
+     */
+    public function create(array $input): User
+    {
+        Validator::make($input, [
+            'username' => ['required', 'string', 'alpha_dash', 'max:50', 'unique:users'],
+            'name' => ['required', 'string', 'max:255'],
+            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
+            'kelas' => ['required', 'in:10,11,12'],
+            'jurusan' => ['nullable', 'string', 'max:50'],
+            'password' => $this->passwordRules(),
+            'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature() ? ['accepted', 'required'] : '',
+        ])->validate();
+
+        return User::create([
+            'username' => $input['username'],
+            'name' => $input['name'],
+            'email' => $input['email'],
+            'kelas' => $input['kelas'],
+            'jurusan' => $input['jurusan'] ?? 'RPL',
+            'role' => 'siswa',
+            'password' => Hash::make($input['password']),
+        ]);
+    }
+
+    /**
+     * Create a personal team for the user.
+     */
+    protected function createTeam(User $user): void
+    {
+        $user->ownedTeams()->save(Team::forceCreate([
+            'user_id' => $user->id,
+            'name' => explode(' ', $user->name, 2)[0]."'s Team",
+            'personal_team' => true,
+        ]));
+    }
+}
