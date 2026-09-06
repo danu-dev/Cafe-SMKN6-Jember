@@ -2,17 +2,14 @@
 
 namespace App\Livewire\Siswa;
 
+use App\Actions\Order\CreateOrderAction;
+use App\Enums\PaymentMethod;
+use App\Exceptions\InsufficientBalanceException;
 use App\Models\KategoriMenu;
 use App\Models\Menu;
-use App\Models\Order;
-use App\Models\OrderItem;
-use App\Models\SaldoTransaction;
-use App\Models\StoreSetting;
 use App\Models\User;
 use App\Services\XenditService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
 use Livewire\Attributes\Validate;
@@ -45,7 +42,7 @@ class MenuOrder extends Component
     {
         /** @var User $user */
         $user = Auth::user();
-        $this->metode_pembayaran = $user->is_verified ? 'saldo' : 'xendit';
+        $this->metode_pembayaran = $user->is_verified ? PaymentMethod::SALDO->value : PaymentMethod::XENDIT->value;
 
         // Jika data lokasi siswa belum lengkap, defaultkan ke ambil sendiri
         if (empty($user->kelas) || empty($user->jurusan) || empty($user->ruangan)) {
@@ -58,21 +55,15 @@ class MenuOrder extends Component
 
     public function addToCart(int $menuId): void
     {
-        $menu = Menu::where('is_available', true)->where('stok', '>', 0)->findOrFail($menuId);
+        $menu = Menu::where('is_available', true)->findOrFail($menuId);
 
         $currentQty = $this->cart[$menuId]['qty'] ?? 0;
-
-        if ($currentQty >= $menu->stok) {
-            session()->flash('error', "Stok untuk \"{$menu->nama}\" tidak mencukupi (sisa {$menu->stok}).");
-            return;
-        }
 
         $this->cart[$menuId] = [
             'id' => $menu->id,
             'nama' => $menu->nama,
             'harga' => (float) $menu->harga,
             'qty' => $currentQty + 1,
-            'stok' => $menu->stok,
             'gambar' => $menu->gambar,
         ];
 
@@ -88,11 +79,6 @@ class MenuOrder extends Component
         if ($qty <= 0) {
             unset($this->cart[$menuId]);
         } else {
-            $menu = Menu::find($menuId);
-            if ($menu && $qty > $menu->stok) {
-                session()->flash('error', "Stok \"{$menu->nama}\" hanya tersedia {$menu->stok}.");
-                $qty = $menu->stok;
-            }
             $this->cart[$menuId]['qty'] = $qty;
         }
 
@@ -131,7 +117,7 @@ class MenuOrder extends Component
         $this->showCheckoutModal = false;
     }
 
-    public function checkout(XenditService $xendit)
+    public function checkout(XenditService $xendit, CreateOrderAction $createOrderAction)
     {
         if (empty($this->cart)) {
             session()->flash('error', 'Keranjang belanja masih kosong.');
@@ -151,7 +137,7 @@ class MenuOrder extends Component
             }
         }
 
-        // Fetch fresh menu data from DB to prevent tampered or outdated session price
+        // Fetch fresh menu data from DB
         $menuIds = array_keys($this->cart);
         $dbMenus = Menu::whereIn('id', $menuIds)->get()->keyBy('id');
 
@@ -189,83 +175,33 @@ class MenuOrder extends Component
         }
 
         // Verification check for saldo payment
-        if ($this->metode_pembayaran === 'saldo' && ! $user->is_verified) {
+        if ($this->metode_pembayaran === PaymentMethod::SALDO->value && ! $user->is_verified) {
             $this->addError('metode_pembayaran', 'Akun Anda belum terverifikasi kartu pelajar. Silakan bayar langsung via QRIS/VA (Xendit) atau COD.');
             return;
         }
 
         // Saldo check
-        if ($this->metode_pembayaran === 'saldo' && (float) $user->saldo < $totalHarga) {
+        if ($this->metode_pembayaran === PaymentMethod::SALDO->value && (float) $user->saldo < $totalHarga) {
             $this->addError('metode_pembayaran', 'Saldo tidak mencukupi (Saldo: Rp ' . number_format($user->saldo, 0, ',', '.') . ', Total: Rp ' . number_format($totalHarga, 0, ',', '.') . '). Silakan pilih QRIS/VA (Xendit) atau COD.');
             return;
         }
 
-        // Auto accept check
-        $autoAccept = StoreSetting::get('auto_accept_orders', '0') === '1';
-        $initialStatus = $autoAccept ? 'diproses' : 'menunggu';
-        $statusPembayaran = $this->metode_pembayaran === 'saldo' ? 'sudah_dibayar' : 'belum_dibayar';
-
-        // Process Transaction
-        $order = DB::transaction(function () use ($user, $totalHarga, $initialStatus, $statusPembayaran, $validCart) {
-            $lockedUser = User::lockForUpdate()->findOrFail($user->id);
-
-            // Deduct saldo if paid with saldo
-            if ($this->metode_pembayaran === 'saldo') {
-                if ((float) $lockedUser->saldo < $totalHarga) {
-                    throw new \Exception('Saldo Anda tidak mencukupi untuk pembayaran ini.');
-                }
-                $saldoSebelum = (float) $lockedUser->saldo;
-                $saldoSesudah = $saldoSebelum - $totalHarga;
-                $lockedUser->update(['saldo' => $saldoSesudah]);
-            }
-
-            // Create Order
-            $kodePesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(Str::random(4));
-            while (Order::where('kode_pesanan', $kodePesanan)->exists()) {
-                $kodePesanan = 'ORD-' . date('Ymd') . '-' . strtoupper(Str::random(4));
-            }
-
-            $order = Order::create([
-                'kode_pesanan' => $kodePesanan,
-                'user_id' => $lockedUser->id,
-                'tipe_pengiriman' => $this->tipe_pengiriman,
-                'kelas_tujuan' => $this->tipe_pengiriman === 'antar' ? $lockedUser->kelas : null,
-                'jurusan_tujuan' => $this->tipe_pengiriman === 'antar' ? $lockedUser->jurusan : null,
-                'ruangan_tujuan' => $this->tipe_pengiriman === 'antar' ? $lockedUser->ruangan : null,
-                'metode_pembayaran' => $this->metode_pembayaran,
-                'status_pembayaran' => $statusPembayaran,
-                'status' => $initialStatus,
-                'total_harga' => $totalHarga,
-                'catatan' => $this->catatan ?: null,
-            ]);
-
-            foreach ($validCart as $item) {
-                OrderItem::create([
-                    'order_id' => $order->id,
-                    'menu_id' => $item['id'],
-                    'jumlah' => $item['qty'],
-                    'harga_satuan' => $item['harga'],
-                    'subtotal' => $item['subtotal'],
-                ]);
-            }
-
-            if ($this->metode_pembayaran === 'saldo') {
-                SaldoTransaction::create([
-                    'user_id' => $lockedUser->id,
-                    'order_id' => $order->id,
-                    'tipe' => 'pembayaran',
-                    'jumlah' => $totalHarga,
-                    'saldo_sebelum' => $saldoSebelum,
-                    'saldo_sesudah' => $saldoSesudah,
-                    'keterangan' => "Pembayaran Pesanan #{$order->kode_pesanan}",
-                ]);
-            }
-
-            return $order;
-        });
+        try {
+            $order = $createOrderAction->execute(
+                user: $user,
+                tipePengiriman: $this->tipe_pengiriman,
+                metodePembayaran: $this->metode_pembayaran,
+                validCart: $validCart,
+                totalHarga: $totalHarga,
+                catatan: $this->catatan
+            );
+        } catch (InsufficientBalanceException $e) {
+            $this->addError('metode_pembayaran', $e->getMessage());
+            return;
+        }
 
         // If Xendit Payment -> Create Invoice & Redirect
-        if ($this->metode_pembayaran === 'xendit') {
+        if ($this->metode_pembayaran === PaymentMethod::XENDIT->value) {
             $successUrl = route('siswa.orders.index');
             $invoice = $xendit->createInvoice(
                 externalId: $order->kode_pesanan,
@@ -292,9 +228,11 @@ class MenuOrder extends Component
 
                 return redirect()->away($invoice['invoice_url']);
             }
+
+            $this->addError('metode_pembayaran', 'Gagal membuat invoice Xendit. Silakan pilih metode bayar lain atau hubungi admin.');
+            return;
         }
 
-        // Clear cart
         $this->cart = [];
         session()->forget('siswa_cart');
         $this->closeCheckout();
