@@ -17,6 +17,10 @@
       "dest": "/public/assets/$1"
     },
     {
+      "src": "/livewire/(.*)",
+      "dest": "/api/index.php"
+    },
+    {
       "src": "/(favicon.ico|robots.txt)",
       "dest": "/public/$1"
     },
@@ -37,7 +41,7 @@
     "APP_SERVICES_CACHE": "/tmp/services.php",
     "VIEW_COMPILED_PATH": "/tmp/views",
     "CACHE_STORE": "array",
-    "SESSION_DRIVER": "cookie",
+    "SESSION_DRIVER": "database",
     "LOG_CHANNEL": "stderr"
   }
 }
