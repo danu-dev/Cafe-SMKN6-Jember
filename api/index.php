@@ -19,7 +19,7 @@ foreach ($storagePaths as $path) {
 $tmpDbPath = '/tmp/database/database.sqlite';
 $seedDbPath = __DIR__ . '/../database/database.sqlite';
 
-if (! file_exists($tmpDbPath)) {
+if (! file_exists($tmpDbPath) || filesize($tmpDbPath) === 0) {
     if (file_exists($seedDbPath)) {
         @copy($seedDbPath, $tmpDbPath);
     } else {
