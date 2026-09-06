@@ -5,6 +5,7 @@ namespace App\Livewire\Components;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
+use Livewire\Attributes\On;
 
 class NotificationBell extends Component
 {
@@ -46,6 +47,7 @@ class NotificationBell extends Component
         }
     }
 
+    #[On('new-notification')]
     public function render()
     {
         if (! Auth::check()) {

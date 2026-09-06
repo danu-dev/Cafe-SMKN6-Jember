@@ -34,7 +34,7 @@ return new class extends Migration
 
         Schema::create('orders', function (Blueprint $table) {
             $table->id();
-            $table->string('kode_pesanan')->unique();
+            $table->string('kode_pesanan')->unique()->index();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('kurir_id')->nullable()->constrained('users')->nullOnDelete();
             $table->enum('tipe_pengiriman', ['antar', 'ambil'])->default('antar');
@@ -44,11 +44,11 @@ return new class extends Migration
             $table->enum('status', [
                 'menunggu',
                 'diproses',
-                'siap',
-                'diantar',
+                'siap_diambil',
+                'sedang_diantar',
                 'selesai',
-                'dibatalkan',
-            ])->default('menunggu');
+                'dibatalkan'
+            ])->default('menunggu')->index();
             $table->decimal('total_harga', 12, 2);
             $table->text('catatan')->nullable();
             $table->timestamps();
@@ -69,7 +69,7 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('admin_id')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('order_id')->nullable()->constrained('orders')->nullOnDelete();
-            $table->enum('tipe', ['topup', 'pembayaran', 'refund']);
+            $table->enum('tipe', ['topup', 'pembayaran', 'refund'])->index();
             $table->decimal('jumlah', 12, 2);
             $table->decimal('saldo_sebelum', 12, 2);
             $table->decimal('saldo_sesudah', 12, 2);

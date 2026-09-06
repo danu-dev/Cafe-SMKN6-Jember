@@ -135,7 +135,7 @@
     {{-- Main Grid: Pesanan Aktif (Left 2 cols) + Menu Rekomendasi (Right 1 col) --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {{-- Left: Status Pesanan Aktif --}}
-        <div class="lg:col-span-2 bg-white rounded-2xl border border-brand-100 p-6 shadow-xs" wire:poll.5s>
+        <div class="lg:col-span-2 bg-white rounded-2xl border border-brand-100 p-6 shadow-xs" wire:poll.10s>
             <div class="flex items-center justify-between pb-4 border-b border-brand-100">
                 <div>
                     <h2 class="text-lg font-bold text-brand-950 flex items-center gap-2">

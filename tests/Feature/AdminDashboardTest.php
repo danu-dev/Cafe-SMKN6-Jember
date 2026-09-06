@@ -30,6 +30,6 @@ class AdminDashboardTest extends TestCase
 
         $response = $this->actingAs($siswa)->get('/admin/dashboard');
 
-        $response->assertStatus(403);
+        $response->assertRedirect(route('dashboard'));
     }
 }

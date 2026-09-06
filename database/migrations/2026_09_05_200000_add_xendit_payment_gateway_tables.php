@@ -22,10 +22,10 @@ return new class extends Migration
         // Create topup_requests table for automated self topup via Xendit
         Schema::create('topup_requests', function (Blueprint $table) {
             $table->id();
-            $table->string('external_id')->unique();
+            $table->string('external_id')->unique()->index();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->decimal('amount', 12, 2);
-            $table->enum('status', ['pending', 'paid', 'expired', 'failed'])->default('pending');
+            $table->enum('status', ['pending', 'paid', 'expired', 'failed'])->default('pending')->index();
             $table->string('xendit_invoice_id')->nullable()->index();
             $table->string('xendit_payment_url')->nullable();
             $table->string('payment_channel')->nullable();

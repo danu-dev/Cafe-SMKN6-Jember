@@ -89,7 +89,7 @@
         <!-- Left: Recent Orders (2 cols) -->
         <div class="lg:col-span-2 bg-white rounded-2xl border border-brand-100 p-6 shadow-xs">
             <div class="flex items-center justify-between pb-4 border-b border-brand-100">
-<div wire:poll.5s>
+<div wire:poll.10s>
                     <h2 class="text-lg font-bold text-brand-950">Pesanan Masuk Terbaru</h2>
                     <p class="text-xs text-brand-500 mt-0.5">Daftar transaksi pesanan terkini yang masuk sistem</p>
                 </div>

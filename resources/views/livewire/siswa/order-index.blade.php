@@ -103,7 +103,7 @@
     </div>
 
     {{-- Orders List --}}
-    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" wire:poll.5s>
+    <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden" wire:poll.10s>
         <div class="overflow-x-auto">
             <table class="min-w-full divide-y divide-gray-200">
                 <thead class="bg-gray-50/75">

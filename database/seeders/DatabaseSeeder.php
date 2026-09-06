@@ -62,7 +62,6 @@ class DatabaseSeeder extends Seeder
             'kategori_id' => $makanan->id,
             'deskripsi' => 'Nasi goreng dengan telur, suwiran ayam, dan kerupuk.',
             'harga' => 15000,
-            'stok' => 25,
             'is_available' => true,
         ]);
 
@@ -70,7 +69,6 @@ class DatabaseSeeder extends Seeder
             'kategori_id' => $minuman->id,
             'deskripsi' => 'Teh manis dingin segar.',
             'harga' => 4000,
-            'stok' => 50,
             'is_available' => true,
         ]);
 
@@ -78,7 +76,6 @@ class DatabaseSeeder extends Seeder
             'kategori_id' => $snack->id,
             'deskripsi' => 'Roti bakar isi coklat lumer dengan parutan keju gurih.',
             'harga' => 10000,
-            'stok' => 15,
             'is_available' => true,
         ]);
     }

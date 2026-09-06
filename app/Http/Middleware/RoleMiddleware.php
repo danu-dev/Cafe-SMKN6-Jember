@@ -21,7 +21,7 @@ class RoleMiddleware
         }
 
         if (! in_array($request->user()->role, $roles)) {
-            abort(403, 'Akses tidak diizinkan untuk role Anda.');
+            return redirect()->route('dashboard');
         }
 
         return $next($request);
