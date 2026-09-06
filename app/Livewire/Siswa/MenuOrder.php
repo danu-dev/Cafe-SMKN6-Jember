@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
+use Livewire\Attributes\Validate;
 use Livewire\Component;
 
 #[Layout('layouts.siswa')]
@@ -30,8 +31,14 @@ class MenuOrder extends Component
 
     // Modal Checkout State
     public bool $showCheckoutModal = false;
-    public string $tipe_pengiriman = 'antar'; // antar / ambil
-    public string $metode_pembayaran = 'saldo'; // saldo / xendit / cod
+
+    #[Validate(['required', 'in:antar,ambil'])]
+    public string $tipe_pengiriman = 'antar';
+
+    #[Validate(['required', 'in:saldo,xendit,cod'])]
+    public string $metode_pembayaran = 'saldo';
+
+    #[Validate(['nullable', 'string', 'max:500'])]
     public string $catatan = '';
 
     public function mount(): void
@@ -131,11 +138,7 @@ class MenuOrder extends Component
             return;
         }
 
-        $this->validate([
-            'tipe_pengiriman' => ['required', 'in:antar,ambil'],
-            'metode_pembayaran' => ['required', 'in:saldo,xendit,cod'],
-            'catatan' => ['nullable', 'string', 'max:500'],
-        ]);
+        $this->validate();
 
         /** @var User $user */
         $user = Auth::user();

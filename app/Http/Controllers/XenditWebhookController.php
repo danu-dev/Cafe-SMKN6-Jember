@@ -2,14 +2,13 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Menu;
+use App\Http\Requests\XenditWebhookRequest;
 use App\Models\Order;
 use App\Models\SaldoTransaction;
 use App\Models\TopupRequest;
 use App\Models\User;
 use App\Services\XenditService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -18,7 +17,7 @@ class XenditWebhookController extends Controller
     /**
      * Handle incoming callback webhook from Xendit.
      */
-    public function handle(Request $request, XenditService $xendit): JsonResponse
+    public function handle(XenditWebhookRequest $request, XenditService $xendit): JsonResponse
     {
         $callbackToken = $request->header('x-callback-token');
 
@@ -31,11 +30,11 @@ class XenditWebhookController extends Controller
             return response()->json(['message' => 'Unauthorized token'], 401);
         }
 
-        $payload = $request->all();
-        $externalId = $payload['external_id'] ?? null;
-        $status = strtoupper($payload['status'] ?? '');
-        $paymentMethod = $payload['payment_method'] ?? ($payload['payment_channel'] ?? null);
-        $paidAmount = (float) ($payload['paid_amount'] ?? ($payload['amount'] ?? 0));
+        $validated = $request->validated();
+        $externalId = $validated['external_id'];
+        $status = strtoupper($validated['status']);
+        $paymentMethod = $validated['payment_method'] ?? ($validated['payment_channel'] ?? null);
+        $paidAmount = (float) ($validated['paid_amount'] ?? ($validated['amount'] ?? 0));
 
         Log::info('Xendit Webhook Received', [
             'external_id' => $externalId,
@@ -49,18 +48,18 @@ class XenditWebhookController extends Controller
 
         // 1. Handle TOPUP Webhook
         if (str_starts_with($externalId, 'TOPUP-')) {
-            return $this->handleTopupWebhook($externalId, $status, $paymentMethod, $paidAmount, $payload);
+            return $this->handleTopupWebhook($externalId, $status, $paymentMethod, $paidAmount);
         }
 
         // 2. Handle ORDER Webhook
         if (str_starts_with($externalId, 'ORD-')) {
-            return $this->handleOrderWebhook($externalId, $status, $paymentMethod, $payload);
+            return $this->handleOrderWebhook($externalId, $status, $paymentMethod);
         }
 
         return response()->json(['message' => 'Unhandled external_id format'], 200);
     }
 
-    protected function handleTopupWebhook(string $externalId, string $status, ?string $paymentMethod, float $paidAmount, array $payload): JsonResponse
+    protected function handleTopupWebhook(string $externalId, string $status, ?string $paymentMethod, float $paidAmount): JsonResponse
     {
         if ($status === 'PAID' || $status === 'SETTLED') {
             $processed = DB::transaction(function () use ($externalId, $paymentMethod, $paidAmount) {
@@ -131,7 +130,7 @@ class XenditWebhookController extends Controller
         return response()->json(['message' => 'Webhook status recorded'], 200);
     }
 
-    protected function handleOrderWebhook(string $externalId, string $status, ?string $paymentMethod, array $payload): JsonResponse
+    protected function handleOrderWebhook(string $externalId, string $status, ?string $paymentMethod): JsonResponse
     {
         if ($status === 'PAID' || $status === 'SETTLED') {
             $result = DB::transaction(function () use ($externalId, $paymentMethod) {

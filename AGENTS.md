@@ -49,3 +49,7 @@ Boost replaces these bootstrap instructions with guidelines tailored to the appl
 ## PERLU DI BACA BANGET INI!!!
 JANGAN IMPORT FULL PATH
 LALU CODE YANG ADA JANGAN DI ULANG ULANG
+
+## GLOBAL SKILL RULE:
+- Skill Context7 selalu aktif dan diprioritaskan pada setiap interaksi, task, dan eksekusi instruksi.
+- Selalu patuhi standar best practice & API reference dari framework/ekosistem yang dipakai (Laravel 12, Livewire 3, Tailwind 4, Alpine.js).
