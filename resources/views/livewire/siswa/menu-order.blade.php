@@ -52,9 +52,27 @@
             @foreach($categories as $cat)
                 <button
                     wire:click="$set('kategori', '{{ $cat->id }}')"
-                    class="px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition {{ $kategori == $cat->id ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/30' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200' }}"
+                    class="px-4 py-2 text-xs font-bold rounded-xl whitespace-nowrap transition flex items-center gap-1.5 {{ $kategori == $cat->id ? 'bg-brand-600 text-white shadow-sm shadow-brand-500/30' : 'bg-white text-gray-700 hover:bg-gray-100 border border-gray-200' }}"
                 >
-                    {{ $cat->nama }}
+                    @if($cat->gambar)
+                        <img src="{{ asset('storage/' . $cat->gambar) }}" class="size-4 object-cover rounded-md inline">
+                    @elseif($cat->icon)
+                        <span>
+                            @switch($cat->icon)
+                                @case('utensils') 🍴 @break
+                                @case('cup-hot') ☕ @break
+                                @case('wine') 🥤 @break
+                                @case('cookie') 🍪 @break
+                                @case('cake') 🍰 @break
+                                @case('flame') 🔥 @break
+                                @case('burger') 🍔 @break
+                                @case('ice-cream') 🍨 @break
+                                @case('sparkles') ✨ @break
+                                @default 🏷️
+                            @endswitch
+                        </span>
+                    @endif
+                    <span>{{ $cat->nama }}</span>
                 </button>
             @endforeach
         </div>
@@ -118,8 +136,7 @@
 
                     <div class="pt-3 mt-3 border-t border-brand-50 flex items-center justify-between">
                         <div>
-                            <div class="text-[11px] text-brand-400 font-medium">Stok: {{ $menu->stok }}</div>
-                            <div class="text-base font-black text-brand-900 mt-0.5">
+                            <div class="text-base font-black text-brand-900">
                                 Rp {{ number_format($menu->harga, 0, ',', '.') }}
                             </div>
                         </div>

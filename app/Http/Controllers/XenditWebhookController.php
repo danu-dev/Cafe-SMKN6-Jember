@@ -165,14 +165,7 @@ class XenditWebhookController extends Controller
 
         if ($status === 'EXPIRED') {
             if ($order->status === 'menunggu' && $order->status_pembayaran === 'belum_dibayar') {
-                DB::transaction(function () use ($order) {
-                    // Restore item stocks
-                    foreach ($order->items as $item) {
-                        Menu::where('id', $item->menu_id)->increment('stok', $item->jumlah);
-                    }
-
-                    $order->update(['status' => 'dibatalkan']);
-                });
+                $order->update(['status' => 'dibatalkan']);
             }
 
             return response()->json(['message' => 'Order marked as cancelled due to expired payment'], 200);

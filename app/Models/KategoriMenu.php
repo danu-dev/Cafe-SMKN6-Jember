@@ -15,6 +15,8 @@ class KategoriMenu extends Model
     protected $fillable = [
         'nama',
         'slug',
+        'icon',
+        'gambar',
     ];
 
     public function menus(): HasMany

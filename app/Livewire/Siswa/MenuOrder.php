@@ -237,19 +237,8 @@ class MenuOrder extends Component
                     'jumlah' => $totalHarga,
                     'saldo_sebelum' => $saldoSebelum,
                     'saldo_sesudah' => $saldoSesudah,
-                    'keterangan' => 'Pembayaran pesanan #' . $order->kode_pesanan,
+                    'keterangan' => "Pembayaran Pesanan #{$order->kode_pesanan}",
                 ]);
-            }
-
-            // Kirim notifikasi ke Admin tentang pesanan baru
-            $admins = User::where('role', 'admin')->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\CafeNotification(
-                    title: 'Pesanan Baru Masuk',
-                    message: "Pesanan #{$order->kode_pesanan} dari {$user->name} senilai Rp " . number_format($totalHarga, 0, ',', '.'),
-                    type: 'order',
-                    actionUrl: route('admin.orders.index')
-                ));
             }
 
             return $order;
@@ -300,7 +289,6 @@ class MenuOrder extends Component
 
         $menus = Menu::with('kategori')
             ->where('is_available', true)
-            ->where('stok', '>', 0)
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('nama', 'like', "%{$this->search}%")

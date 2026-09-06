@@ -43,7 +43,6 @@ class Dashboard extends Component
         // 4 Menu Rekomendasi / Tersedia
         $featuredMenus = Menu::with('kategori')
             ->where('is_available', true)
-            ->where('stok', '>', 0)
             ->latest()
             ->take(4)
             ->get();

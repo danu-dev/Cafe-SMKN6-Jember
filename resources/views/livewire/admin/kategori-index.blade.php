@@ -52,6 +52,7 @@
             <table class="w-full text-left text-sm">
                 <thead class="bg-brand-50/60 text-brand-900 text-xs uppercase font-semibold border-b border-brand-100">
                     <tr>
+                        <th class="px-6 py-3.5">Icon / Gambar</th>
                         <th class="px-6 py-3.5">Nama Kategori</th>
                         <th class="px-6 py-3.5">Slug</th>
                         <th class="px-6 py-3.5">Jumlah Menu</th>
@@ -61,6 +62,30 @@
                 <tbody class="divide-y divide-brand-50">
                     @forelse ($categories as $kategori)
                         <tr class="hover:bg-brand-50/30 transition">
+                            <td class="px-6 py-4">
+                                @if($kategori->gambar)
+                                    <img src="{{ asset('storage/' . $kategori->gambar) }}" alt="{{ $kategori->nama }}" class="size-10 object-cover rounded-xl border border-brand-200">
+                                @elseif($kategori->icon)
+                                    <div class="size-10 rounded-xl bg-brand-50 border border-brand-200 flex items-center justify-center text-lg">
+                                        @switch($kategori->icon)
+                                            @case('utensils') 🍴 @break
+                                            @case('cup-hot') ☕ @break
+                                            @case('wine') 🥤 @break
+                                            @case('cookie') 🍪 @break
+                                            @case('cake') 🍰 @break
+                                            @case('flame') 🔥 @break
+                                            @case('burger') 🍔 @break
+                                            @case('ice-cream') 🍨 @break
+                                            @case('sparkles') ✨ @break
+                                            @default 🏷️
+                                        @endswitch
+                                    </div>
+                                @else
+                                    <div class="size-10 rounded-xl bg-gray-50 border border-gray-200 flex items-center justify-center text-xs text-gray-400 font-bold">
+                                        -
+                                    </div>
+                                @endif
+                            </td>
                             <td class="px-6 py-4 font-semibold text-brand-950">
                                 {{ $kategori->nama }}
                             </td>
@@ -90,7 +115,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="px-6 py-12 text-center text-brand-400">
+                            <td colspan="5" class="px-6 py-12 text-center text-brand-400">
                                 Belum ada kategori menu.
                             </td>
                         </tr>
@@ -125,6 +150,41 @@
                                placeholder="Makanan Berat, Minuman Dingin"
                                class="w-full rounded-xl border-brand-200 text-sm focus:border-brand-500 focus:ring-brand-500 placeholder:text-gray-400">
                         @error('nama') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-brand-900 uppercase mb-1">Pilih Icon Preset</label>
+                        <select wire:model="icon" class="w-full rounded-xl border-brand-200 text-sm focus:border-brand-500 focus:ring-brand-500">
+                            <option value="">-- Tanpa Icon Preset --</option>
+                            @foreach($availableIcons as $key => $label)
+                                <option value="{{ $key }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                        @error('icon') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-brand-900 uppercase mb-1">Atau Upload Gambar Kategori (Opsional)</label>
+                        <input type="file" 
+                               wire:model="gambar" 
+                               accept="image/*"
+                               class="w-full text-xs text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100">
+                        @error('gambar') <span class="text-xs text-red-600 mt-1 block">{{ $message }}</span> @enderror
+
+                        <div wire:loading wire:target="gambar" class="text-xs text-brand-600 mt-1">Mengunggah file...</div>
+
+                        @if ($gambar)
+                            <div class="mt-2 flex items-center gap-3">
+                                <span class="text-xs text-brand-600">Preview:</span>
+                                <img src="{{ $gambar->temporaryUrl() }}" class="size-12 object-cover rounded-xl border border-brand-200">
+                            </div>
+                        @elseif ($existingGambar)
+                            <div class="mt-2 flex items-center gap-3">
+                                <span class="text-xs text-brand-600">Gambar saat ini:</span>
+                                <img src="{{ asset('storage/' . $existingGambar) }}" class="size-12 object-cover rounded-xl border border-brand-200">
+                                <button type="button" wire:click="removeGambar" class="text-xs text-red-600 hover:underline">Hapus Gambar</button>
+                            </div>
+                        @endif
                     </div>
 
                     <div class="flex justify-end gap-3 pt-3 border-t border-brand-100">

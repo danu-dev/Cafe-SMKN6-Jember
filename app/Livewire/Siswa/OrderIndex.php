@@ -78,11 +78,6 @@ class OrderIndex extends Component
         }
 
         DB::transaction(function () use ($order) {
-            // Restore stock
-            foreach ($order->items as $item) {
-                Menu::where('id', $item->menu_id)->increment('stok', $item->jumlah);
-            }
-
             // Refund saldo if paid with saldo
             if ($order->metode_pembayaran === 'saldo' && $order->status_pembayaran === 'sudah_dibayar') {
                 /** @var User $user */
@@ -140,12 +135,7 @@ class OrderIndex extends Component
                         'status' => $pendingOrder->status === 'menunggu' ? 'diproses' : $pendingOrder->status,
                     ]);
                 } elseif ($status === 'EXPIRED') {
-                    DB::transaction(function () use ($pendingOrder) {
-                        foreach ($pendingOrder->items as $item) {
-                            Menu::where('id', $item->menu_id)->increment('stok', $item->jumlah);
-                        }
-                        $pendingOrder->update(['status' => 'dibatalkan']);
-                    });
+                    $pendingOrder->update(['status' => 'dibatalkan']);
                 }
             }
         }

@@ -142,7 +142,7 @@ class MenuIndex extends Component
         $this->modalOpen = false;
         $this->reset([
             'editingId', 'kategori_id', 'nama', 'deskripsi',
-            'harga', 'stok', 'is_available', 'gambar', 'existingGambar',
+            'harga', 'is_available', 'gambar', 'existingGambar',
         ]);
     }
 

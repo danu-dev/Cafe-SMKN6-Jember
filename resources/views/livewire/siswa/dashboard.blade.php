@@ -17,18 +17,6 @@
                 @endif
             </p>
         </div>
-        <div class="flex items-center gap-2">
-            <a href="{{ route('profile.show') }}" class="inline-flex items-center px-3.5 py-2 bg-white/15 hover:bg-white/25 text-white font-bold text-xs rounded-xl border border-white/20 transition gap-1.5" title="Perbarui Ruangan / Kelas">
-                <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
-                Edit Data Kelas & Ruangan
-            </a>
-            <a href="{{ route('siswa.menu.index') }}" class="inline-flex items-center px-4 py-2 bg-white text-brand-800 font-bold text-xs rounded-xl hover:bg-brand-50 shadow-sm transition gap-1.5">
-                <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                </svg>
-                Pesan Menu
-            </a>
-        </div>
     </div>
 
     {{-- Banner Notifikasi Jika Ruangan Belum Dilengkapi --}}
@@ -66,7 +54,7 @@
                 </div>
             </div>
             <a href="{{ route('siswa.saldo.index') }}" class="text-xs font-bold text-amber-900 bg-amber-200/80 hover:bg-amber-200 px-3 py-1.5 rounded-xl transition shrink-0 self-start sm:self-center">
-                {{ auth()->user()->kartu_pelajar_photo ? 'Lihat Status' : 'Upload Kartu &rarr;' }}
+                {{ auth()->user()->kartu_pelajar_photo ? 'Lihat Status' : 'Upload Kartu →' }}
             </a>
         </div>
     @endif

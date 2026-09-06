@@ -19,13 +19,11 @@ class Menu extends Model
         'deskripsi',
         'harga',
         'gambar',
-        'stok',
         'is_available',
     ];
 
     protected $casts = [
         'harga' => 'decimal:2',
-        'stok' => 'integer',
         'is_available' => 'boolean',
     ];
 

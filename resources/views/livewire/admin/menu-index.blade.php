@@ -104,7 +104,7 @@
 
                     <div class="pt-3 mt-3 border-t border-brand-50 space-y-3">
                         <div class="flex items-center justify-between">
-                            <div class="text-xs text-brand-500 font-medium">Stok: <span class="font-bold text-brand-950">{{ $item->stok }}</span></div>
+                            {{-- <div class="text-xs text-brand-500 font-medium">Stok: <span class="font-bold text-brand-950">{{ $item->stok }}</span></div> --}}
                             <div class="text-base font-black text-brand-900">
                                 Rp {{ number_format($item->harga, 0, ',', '.') }}
                             </div>
@@ -235,13 +235,7 @@
 
                         @if ($gambar)
                             <div class="mt-2 text-xs text-brand-600">
-                                <span class="font-semibold">Preview Baru:</span>
-                                <img src="{{ $gambar->temporaryUrl() }}" class="size-20 object-cover rounded-xl mt-1 border border-brand-200">
-                            </div>
-                        @elseif ($existingGambar)
-                            <div class="mt-2 text-xs text-brand-600">
-                                <span class="font-semibold">Gambar Saat Ini:</span>
-                                <img src="{{ asset('storage/' . $existingGambar) }}" class="size-20 object-cover rounded-xl mt-1 border border-brand-200">
+                                <span class="font-semiborder border-brand-200">
                             </div>
                         @endif
                     </div>
