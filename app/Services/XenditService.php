@@ -116,8 +116,7 @@ class XenditService
         $expectedToken = config('xendit.webhook_token');
 
         if (empty($expectedToken) || empty($incomingToken)) {
-            // Jika token belum di-set di environment lokal/development, izinkan untuk kemudahan testing
-            return app()->environment('local', 'testing') || true;
+            return app()->environment('local', 'testing') && empty($expectedToken);
         }
 
         return hash_equals($expectedToken, $incomingToken);

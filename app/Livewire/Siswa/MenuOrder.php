@@ -148,16 +148,39 @@ class MenuOrder extends Component
             }
         }
 
-        // Calculate total
+        // Fetch fresh menu data from DB to prevent tampered or outdated session price
+        $menuIds = array_keys($this->cart);
+        $dbMenus = Menu::whereIn('id', $menuIds)->get()->keyBy('id');
+
         $totalHarga = 0;
         $itemsPayload = [];
-        foreach ($this->cart as $item) {
-            $subtotal = $item['harga'] * $item['qty'];
+        $validCart = [];
+
+        foreach ($this->cart as $menuId => $item) {
+            $dbMenu = $dbMenus->get($menuId);
+            if (! $dbMenu || ! $dbMenu->is_available) {
+                $menuName = $dbMenu ? $dbMenu->nama : 'Salah satu menu';
+                $this->addError('metode_pembayaran', "Menu \"{$menuName}\" sedang tidak tersedia (Not Ready).");
+                return;
+            }
+
+            $freshPrice = (float) $dbMenu->harga;
+            $qty = (int) $item['qty'];
+            $subtotal = $freshPrice * $qty;
             $totalHarga += $subtotal;
+
+            $validCart[$menuId] = [
+                'id' => $dbMenu->id,
+                'nama' => $dbMenu->nama,
+                'harga' => $freshPrice,
+                'qty' => $qty,
+                'subtotal' => $subtotal,
+            ];
+
             $itemsPayload[] = [
-                'name' => $item['nama'],
-                'quantity' => $item['qty'],
-                'price' => (int) $item['harga'],
+                'name' => $dbMenu->nama,
+                'quantity' => $qty,
+                'price' => (int) $freshPrice,
                 'category' => 'Food & Drink',
             ];
         }
@@ -180,20 +203,14 @@ class MenuOrder extends Component
         $statusPembayaran = $this->metode_pembayaran === 'saldo' ? 'sudah_dibayar' : 'belum_dibayar';
 
         // Process Transaction
-        $order = DB::transaction(function () use ($user, $totalHarga, $initialStatus, $statusPembayaran) {
+        $order = DB::transaction(function () use ($user, $totalHarga, $initialStatus, $statusPembayaran, $validCart) {
             $lockedUser = User::lockForUpdate()->findOrFail($user->id);
-
-            // Deduct stock
-            foreach ($this->cart as $menuId => $item) {
-                $menu = Menu::lockForUpdate()->findOrFail($menuId);
-                if ($menu->stok < $item['qty']) {
-                    throw new \Exception("Stok untuk \"{$menu->nama}\" tersisa {$menu->stok}, tidak cukup untuk pesanan Anda ({$item['qty']}).");
-                }
-                $menu->decrement('stok', $item['qty']);
-            }
 
             // Deduct saldo if paid with saldo
             if ($this->metode_pembayaran === 'saldo') {
+                if ((float) $lockedUser->saldo < $totalHarga) {
+                    throw new \Exception('Saldo Anda tidak mencukupi untuk pembayaran ini.');
+                }
                 $saldoSebelum = (float) $lockedUser->saldo;
                 $saldoSesudah = $saldoSebelum - $totalHarga;
                 $lockedUser->update(['saldo' => $saldoSesudah]);
@@ -219,13 +236,13 @@ class MenuOrder extends Component
                 'catatan' => $this->catatan ?: null,
             ]);
 
-            foreach ($this->cart as $item) {
+            foreach ($validCart as $item) {
                 OrderItem::create([
                     'order_id' => $order->id,
                     'menu_id' => $item['id'],
                     'jumlah' => $item['qty'],
                     'harga_satuan' => $item['harga'],
-                    'subtotal' => $item['harga'] * $item['qty'],
+                    'subtotal' => $item['subtotal'],
                 ]);
             }
 

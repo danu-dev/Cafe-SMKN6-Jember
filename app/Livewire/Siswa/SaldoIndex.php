@@ -168,60 +168,11 @@ class SaldoIndex extends Component
         $this->addError('nominalTopup', 'Gagal membuat invoice Xendit. Pastikan XENDIT_SECRET_KEY di file .env sudah diisi dengan API Key asli dari Dashboard Xendit.');
     }
 
-    public function render(XenditService $xendit)
+    public function render()
     {
         /** @var User $user */
         $user = Auth::user();
         $userId = $user->id;
-
-        // Auto-check pending Xendit invoices for this user
-        $pendingTopups = TopupRequest::where('user_id', $userId)
-            ->where('status', 'pending')
-            ->whereNotNull('xendit_invoice_id')
-            ->latest()
-            ->take(5)
-            ->get();
-
-        foreach ($pendingTopups as $pendingTopup) {
-            $invoiceData = $xendit->getInvoice($pendingTopup->xendit_invoice_id);
-            if ($invoiceData) {
-                $status = strtoupper($invoiceData['status'] ?? '');
-                if ($status === 'PAID' || $status === 'SETTLED') {
-                    $paymentMethod = $invoiceData['payment_method'] ?? ($invoiceData['payment_channel'] ?? 'Xendit');
-                    $paidAmount = (float) ($invoiceData['paid_amount'] ?? ($invoiceData['amount'] ?? $pendingTopup->amount));
-
-                    DB::transaction(function () use ($user, $pendingTopup, $paymentMethod, $paidAmount) {
-                        $lockedUser = User::lockForUpdate()->findOrFail($user->id);
-                        $saldoSebelum = (float) $lockedUser->saldo;
-                        $saldoSesudah = $saldoSebelum + $paidAmount;
-
-                        $lockedUser->update(['saldo' => $saldoSesudah]);
-
-                        $pendingTopup->update([
-                            'status' => 'paid',
-                            'payment_channel' => $paymentMethod,
-                            'paid_at' => now(),
-                        ]);
-
-                        SaldoTransaction::create([
-                            'user_id' => $lockedUser->id,
-                            'tipe' => 'topup',
-                            'jumlah' => $paidAmount,
-                            'saldo_sebelum' => $saldoSebelum,
-                            'saldo_sesudah' => $saldoSesudah,
-                            'keterangan' => "Top Up Otomatis via Xendit ({$paymentMethod})",
-                        ]);
-                    });
-
-                    session()->flash('message', 'Pembayaran Xendit berhasil dikonfirmasi! Saldo Anda telah bertambah.');
-                } elseif ($status === 'EXPIRED') {
-                    $pendingTopup->update(['status' => 'expired']);
-                }
-            }
-        }
-
-        // Refresh user data after sync
-        $user->refresh();
 
         $query = SaldoTransaction::where('user_id', $userId)
             ->when($this->tipeFilter, fn ($q) => $q->where('tipe', $this->tipeFilter))

@@ -62,19 +62,18 @@ class XenditWebhookController extends Controller
 
     protected function handleTopupWebhook(string $externalId, string $status, ?string $paymentMethod, float $paidAmount, array $payload): JsonResponse
     {
-        $topup = TopupRequest::where('external_id', $externalId)->first();
-
-        if (! $topup) {
-            Log::error("TopupRequest with external_id {$externalId} not found");
-            return response()->json(['message' => 'Topup not found'], 404);
-        }
-
         if ($status === 'PAID' || $status === 'SETTLED') {
-            if ($topup->status === 'paid') {
-                return response()->json(['message' => 'Topup already processed'], 200);
-            }
+            $processed = DB::transaction(function () use ($externalId, $paymentMethod, $paidAmount) {
+                $topup = TopupRequest::where('external_id', $externalId)->lockForUpdate()->first();
 
-            DB::transaction(function () use ($topup, $paymentMethod, $paidAmount) {
+                if (! $topup) {
+                    return 'not_found';
+                }
+
+                if ($topup->status === 'paid') {
+                    return 'already_paid';
+                }
+
                 $user = User::lockForUpdate()->findOrFail($topup->user_id);
                 $saldoSebelum = (float) $user->saldo;
                 $amount = $paidAmount > 0 ? $paidAmount : (float) $topup->amount;
@@ -104,14 +103,28 @@ class XenditWebhookController extends Controller
                     type: 'balance',
                     actionUrl: route('siswa.saldo.index')
                 ));
+
+                return 'success';
             });
+
+            if ($processed === 'not_found') {
+                Log::error("TopupRequest with external_id {$externalId} not found");
+                return response()->json(['message' => 'Topup not found'], 404);
+            }
+
+            if ($processed === 'already_paid') {
+                return response()->json(['message' => 'Topup already processed'], 200);
+            }
 
             Log::info("Topup {$externalId} successfully paid and saldo incremented");
             return response()->json(['message' => 'Topup successfully processed'], 200);
         }
 
         if ($status === 'EXPIRED') {
-            $topup->update(['status' => 'expired']);
+            TopupRequest::where('external_id', $externalId)
+                ->where('status', 'pending')
+                ->update(['status' => 'expired']);
+
             return response()->json(['message' => 'Topup marked as expired'], 200);
         }
 
@@ -120,43 +133,55 @@ class XenditWebhookController extends Controller
 
     protected function handleOrderWebhook(string $externalId, string $status, ?string $paymentMethod, array $payload): JsonResponse
     {
-        $order = Order::with('items')->where('kode_pesanan', $externalId)->first();
-
-        if (! $order) {
-            Log::error("Order with kode_pesanan {$externalId} not found");
-            return response()->json(['message' => 'Order not found'], 404);
-        }
-
         if ($status === 'PAID' || $status === 'SETTLED') {
-            if ($order->status_pembayaran === 'sudah_dibayar') {
+            $result = DB::transaction(function () use ($externalId, $paymentMethod) {
+                $order = Order::with('user')->where('kode_pesanan', $externalId)->lockForUpdate()->first();
+
+                if (! $order) {
+                    return 'not_found';
+                }
+
+                if ($order->status_pembayaran === 'sudah_dibayar') {
+                    return 'already_paid';
+                }
+
+                $order->update([
+                    'status_pembayaran' => 'sudah_dibayar',
+                    'xendit_payment_channel' => $paymentMethod,
+                    'paid_at' => now(),
+                    'status' => $order->status === 'menunggu' ? 'diproses' : $order->status,
+                ]);
+
+                if ($order->user) {
+                    $order->user->notify(new \App\Notifications\CafeNotification(
+                        title: 'Pembayaran Diterima',
+                        message: "Pembayaran untuk pesanan #{$order->kode_pesanan} telah lunas via {$paymentMethod}. Pesanan segera diproses.",
+                        type: 'order',
+                        actionUrl: route('siswa.orders.index')
+                    ));
+                }
+
+                // Notif ke Admin
+                $admins = User::where('role', 'admin')->get();
+                foreach ($admins as $admin) {
+                    $admin->notify(new \App\Notifications\CafeNotification(
+                        title: 'Pembayaran Masuk (Xendit)',
+                        message: "Pesanan #{$order->kode_pesanan} ({$order->user->name}) telah dibayar via {$paymentMethod}.",
+                        type: 'order',
+                        actionUrl: route('admin.orders.index')
+                    ));
+                }
+
+                return 'success';
+            });
+
+            if ($result === 'not_found') {
+                Log::error("Order with kode_pesanan {$externalId} not found");
+                return response()->json(['message' => 'Order not found'], 404);
+            }
+
+            if ($result === 'already_paid') {
                 return response()->json(['message' => 'Order already paid'], 200);
-            }
-
-            $order->update([
-                'status_pembayaran' => 'sudah_dibayar',
-                'xendit_payment_channel' => $paymentMethod,
-                'paid_at' => now(),
-                'status' => $order->status === 'menunggu' ? 'diproses' : $order->status,
-            ]);
-
-            if ($order->user) {
-                $order->user->notify(new \App\Notifications\CafeNotification(
-                    title: 'Pembayaran Diterima',
-                    message: "Pembayaran untuk pesanan #{$order->kode_pesanan} telah lunas via {$paymentMethod}. Pesanan segera diproses.",
-                    type: 'order',
-                    actionUrl: route('siswa.orders.index')
-                ));
-            }
-
-            // Notif juga ke Admin
-            $admins = User::where('role', 'admin')->get();
-            foreach ($admins as $admin) {
-                $admin->notify(new \App\Notifications\CafeNotification(
-                    title: 'Pembayaran Masuk (Xendit)',
-                    message: "Pesanan #{$order->kode_pesanan} ({$order->user->name}) telah dibayar via {$paymentMethod}.",
-                    type: 'order',
-                    actionUrl: route('admin.orders.index')
-                ));
             }
 
             Log::info("Order {$externalId} successfully marked as PAID via Xendit ({$paymentMethod})");
@@ -164,9 +189,10 @@ class XenditWebhookController extends Controller
         }
 
         if ($status === 'EXPIRED') {
-            if ($order->status === 'menunggu' && $order->status_pembayaran === 'belum_dibayar') {
-                $order->update(['status' => 'dibatalkan']);
-            }
+            Order::where('kode_pesanan', $externalId)
+                ->where('status', 'menunggu')
+                ->where('status_pembayaran', 'belum_dibayar')
+                ->update(['status' => 'dibatalkan']);
 
             return response()->json(['message' => 'Order marked as cancelled due to expired payment'], 200);
         }

@@ -5,6 +5,7 @@ namespace App\Livewire\Admin;
 use App\Models\Order;
 use App\Models\SaldoTransaction;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -142,21 +143,21 @@ class OrderIndex extends Component
             return;
         }
 
-        $order = Order::with('user')->findOrFail($orderId);
+        $updatedOrder = DB::transaction(function () use ($orderId, $newStatus) {
+            $order = Order::with('user')->lockForUpdate()->findOrFail($orderId);
 
-        DB::transaction(function () use ($order, $newStatus) {
             // Auto refund if cancelled & paid with saldo
             if ($newStatus === 'dibatalkan' && $order->status !== 'dibatalkan') {
                 if ($order->metode_pembayaran === 'saldo' && $order->status_pembayaran === 'sudah_dibayar') {
-                    $user = $order->user;
-                    $saldoSebelum = $user->saldo;
+                    $user = User::lockForUpdate()->findOrFail($order->user_id);
+                    $saldoSebelum = (float) $user->saldo;
                     $saldoSesudah = $saldoSebelum + $order->total_harga;
 
                     $user->update(['saldo' => $saldoSesudah]);
 
                     SaldoTransaction::create([
                         'user_id' => $user->id,
-                        'admin_id' => auth()->id(),
+                        'admin_id' => Auth::id(),
                         'order_id' => $order->id,
                         'tipe' => 'refund',
                         'jumlah' => $order->total_harga,
@@ -192,6 +193,8 @@ class OrderIndex extends Component
                     actionUrl: route('siswa.orders.index')
                 ));
             }
+
+            return $order;
         });
 
         // Refresh detail modal if open
@@ -199,7 +202,7 @@ class OrderIndex extends Component
             $this->selectedOrder = Order::with(['user', 'kurir', 'items.menu', 'saldoTransactions'])->find($orderId);
         }
 
-        session()->flash('message', "Status pesanan #{$order->kode_pesanan} diubah ke {$newStatus}.");
+        session()->flash('message', "Status pesanan #{$updatedOrder->kode_pesanan} diubah ke {$newStatus}.");
     }
 
     public function render()

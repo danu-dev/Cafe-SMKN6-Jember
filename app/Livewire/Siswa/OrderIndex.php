@@ -108,37 +108,9 @@ class OrderIndex extends Component
         session()->flash('message', "Pesanan #{$order->kode_pesanan} berhasil dibatalkan.");
     }
 
-    public function render(XenditService $xendit)
+    public function render()
     {
         $userId = Auth::id();
-
-        // Auto-check pending Xendit orders for this user
-        $pendingOrders = Order::where('user_id', $userId)
-            ->where('metode_pembayaran', 'xendit')
-            ->where('status_pembayaran', 'belum_dibayar')
-            ->whereNotNull('xendit_invoice_id')
-            ->where('status', '!=', 'dibatalkan')
-            ->latest()
-            ->take(5)
-            ->get();
-
-        foreach ($pendingOrders as $pendingOrder) {
-            $invoiceData = $xendit->getInvoice($pendingOrder->xendit_invoice_id);
-            if ($invoiceData) {
-                $status = strtoupper($invoiceData['status'] ?? '');
-                if ($status === 'PAID' || $status === 'SETTLED') {
-                    $paymentMethod = $invoiceData['payment_method'] ?? ($invoiceData['payment_channel'] ?? 'Xendit');
-                    $pendingOrder->update([
-                        'status_pembayaran' => 'sudah_dibayar',
-                        'xendit_payment_channel' => $paymentMethod,
-                        'paid_at' => now(),
-                        'status' => $pendingOrder->status === 'menunggu' ? 'diproses' : $pendingOrder->status,
-                    ]);
-                } elseif ($status === 'EXPIRED') {
-                    $pendingOrder->update(['status' => 'dibatalkan']);
-                }
-            }
-        }
 
         $query = Order::with(['kurir', 'items.menu'])
             ->where('user_id', $userId)
