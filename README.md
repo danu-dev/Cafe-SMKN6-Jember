@@ -39,7 +39,7 @@ Platform digital pemesanan makanan, minuman, dan snack berbasis web untuk Cafe/K
 
 - **Backend Framework:** [Laravel 12](https://laravel.com) (PHP 8.2+)
 - **Fullstack Reactivity:** [Livewire 3](https://livewire.laravel.com)
-- **Frontend & Styling:** [Tailwind CSS 4](https://tailwindcss.com), Alpine.js, Blade Components
+- **Frontend & Styling:** [Tailwind CSS 3](https://tailwindcss.com), Alpine.js, Blade Components
 - **Authentication:** Laravel Jetstream & Fortify (Two-Factor Auth & Passkeys ready)
 - **Database:** MySQL / MariaDB (Eloquent ORM dengan DB Transaction safety)
 - **Payment Gateway:** [Xendit API & Webhook](https://www.xendit.co/)
@@ -47,16 +47,6 @@ Platform digital pemesanan makanan, minuman, dan snack berbasis web untuk Cafe/K
 ---
 
 ## 🚀 Panduan Instalasi
-
-### 1. Kebutuhan Sistem
-Pastikan perangkat Anda sudah terinstal:
-- PHP >= 8.2 (ekstensi: `pdo`, `mbstring`, `fileinfo`, `gd`/`imagick`, `curl`)
-- Composer >= 2.x
-- Node.js >= 18.x & NPM
-- Database MySQL / MariaDB
-
-### 2. Langkah Setup
-
 ```bash
 # 1. Clone repositori
 git clone https://github.com/danu-dev/Cafe-SMKN6-Jember.git
@@ -94,7 +84,7 @@ php artisan storage:link
 npm run build
 ```
 
-### 3. Menjalankan Aplikasi
+### Menjalankan Aplikasi
 
 Jalankan server pengembangan lokal:
 
@@ -109,14 +99,6 @@ Akses aplikasi di browser: `http://localhost:8000`
 ## 👥 Akun Demo / Default Seeder
 
 Setelah menjalankan database seeder (`php artisan db:seed`), akun default berikut dapat digunakan:
-
-| Role | Email | Password |
-|---|---|---|
-| **Admin** | `admin@cafe.smkn6jember.sch.id` | `password` |
-| **Kurir** | `kurir@cafe.smkn6jember.sch.id` | `password` |
-| **Siswa** | `siswa@cafe.smkn6jember.sch.id` | `password` |
-
----
 
 ## 🧪 Testing
 
